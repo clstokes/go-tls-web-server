@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -15,9 +16,9 @@ func main() {
 }
 
 func realMain() int {
-	httpAddr := os.Getenv("NOMAD_ADDR_http")
+	httpAddr := os.Getenv("NOMAD_PORT_http")
 	if httpAddr == "" {
-		log.Fatal("NOMAD_ADDR_http must be set and non-empty")
+		log.Fatal("NOMAD_PORT_http must be set and non-empty")
 	}
 
 	pathCert := os.Getenv("PATH_CERT")
@@ -30,11 +31,12 @@ func realMain() int {
 		log.Fatal("PATH_KEY must be set and non-empty")
 	}
 
-	log.Printf("Listening on [%v]...\n", httpAddr)
+	listenAddr := fmt.Sprintf(":%v", httpAddr)
+	log.Printf("Listening on [%v]...\n", listenAddr)
 
 	http.HandleFunc("/", handleRequest)
 	http.HandleFunc("/healthz", handleHealthzRequest)
-	err := http.ListenAndServeTLS(httpAddr, pathCert, pathKey, nil)
+	err := http.ListenAndServeTLS(listenAddr, pathCert, pathKey, nil)
 
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
