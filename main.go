@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"os"
@@ -46,6 +47,7 @@ func realMain() int {
 }
 
 func handleRequest(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Handling request [%v]...\n", html.EscapeString(r.URL.Path))
 	w.Write([]byte(ResponseOk))
 	return
 }
