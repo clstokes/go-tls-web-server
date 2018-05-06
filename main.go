@@ -1,15 +1,17 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"html"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"time"
 )
 
 const (
-	ResponseOk = "{\"status\":\"ok\"}\n"
+	ResponseOk = "{\"status\":\"ok\"}"
 )
 
 func main() {
@@ -17,25 +19,26 @@ func main() {
 }
 
 func realMain() int {
-	httpAddr := os.Getenv("NOMAD_PORT_http")
-	if httpAddr == "" {
-		log.Fatal("NOMAD_PORT_http must be set and non-empty")
+	listenAddr := flag.String("listen-address", ":8080", "address to listen on")
+	clientCert := flag.String("client-cert", "", "path to the CA certificate")
+	clientKey := flag.String("client-key", "", "path to the CA private key")
+	maxCrashDuration := flag.Int("crash", 0, "maximum duration to wait before crashing")
+	flag.Parse()
+
+	if *maxCrashDuration != 0 {
+		setupCrashRoutine(*maxCrashDuration)
 	}
 
-	pathCert := os.Getenv("PATH_CERT")
-	pathKey := os.Getenv("PATH_KEY")
-
-	listenAddr := fmt.Sprintf(":%v", httpAddr)
-	log.Printf("Listening on [%v]...\n", listenAddr)
+	log.Printf("Listening on [%v]...\n", *listenAddr)
 
 	http.HandleFunc("/", handleRequest)
 	http.HandleFunc("/healthz", handleHealthzRequest)
 
 	var err error
-	if pathCert != "" && pathKey != "" {
-		err = http.ListenAndServeTLS(listenAddr, pathCert, pathKey, nil)
+	if *clientCert != "" && *clientKey != "" {
+		err = http.ListenAndServeTLS(*listenAddr, *clientCert, *clientKey, nil)
 	} else {
-		err = http.ListenAndServe(listenAddr, nil)
+		err = http.ListenAndServe(*listenAddr, nil)
 	}
 
 	if err != nil {
@@ -54,4 +57,15 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 func handleHealthzRequest(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(ResponseOk))
 	return
+}
+
+func setupCrashRoutine(maxCrashDuration int) {
+	rand.Seed(time.Now().Unix())
+	crashDuration := rand.Intn(maxCrashDuration)
+
+	log.Printf("Crashing in [%v] seconds", crashDuration)
+	go func() {
+		time.Sleep(time.Duration(crashDuration) * time.Second)
+		log.Fatal("Crashing...")
+	}()
 }
