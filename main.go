@@ -23,21 +23,20 @@ func realMain() int {
 	}
 
 	pathCert := os.Getenv("PATH_CERT")
-	if pathCert == "" {
-		log.Fatal("PATH_CERT must be set and non-empty")
-	}
-
 	pathKey := os.Getenv("PATH_KEY")
-	if pathKey == "" {
-		log.Fatal("PATH_KEY must be set and non-empty")
-	}
 
 	listenAddr := fmt.Sprintf(":%v", httpAddr)
 	log.Printf("Listening on [%v]...\n", listenAddr)
 
 	http.HandleFunc("/", handleRequest)
 	http.HandleFunc("/healthz", handleHealthzRequest)
-	err := http.ListenAndServeTLS(listenAddr, pathCert, pathKey, nil)
+
+	var err error
+	if pathCert != "" && pathKey != "" {
+		err = http.ListenAndServeTLS(listenAddr, pathCert, pathKey, nil)
+	} else {
+		err = http.ListenAndServe(listenAddr, nil)
+	}
 
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
